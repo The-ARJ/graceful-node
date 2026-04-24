@@ -1,0 +1,60 @@
+{
+  "name": "@the-arj/graceful-node",
+  "version": "0.1.0",
+  "description": "Production-grade graceful shutdown and Kubernetes health checks for Node.js. Modern replacement for the abandoned @godaddy/terminus and stoppable.",
+  "keywords": [
+    "graceful",
+    "shutdown",
+    "sigterm",
+    "sigint",
+    "health",
+    "kubernetes",
+    "k8s",
+    "liveness",
+    "readiness",
+    "terminus",
+    "stoppable",
+    "drain",
+    "node"
+  ],
+  "author": "The-ARJ",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": { "node": ">=16" },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/The-ARJ/graceful-node.git"
+  },
+  "bugs": { "url": "https://github.com/The-ARJ/graceful-node/issues" },
+  "homepage": "https://github.com/The-ARJ/graceful-node#readme"
+}
