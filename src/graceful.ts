@@ -79,12 +79,35 @@ export function graceful(options: GracefulOptions = {}): GracefulHandle {
   const health = options.health ? createHealth(options.health) : undefined
 
   let shutdownPromise: Promise<void> | null = null
+  let forceTimer: ReturnType<typeof setTimeout> | null = null
+
+  function safeCall(label: string, fn: (() => void) | undefined): void {
+    if (!fn) return
+    try {
+      fn()
+    } catch (err) {
+      log(`[graceful-node] ${label} callback error: ${err instanceof Error ? err.stack ?? err.message : String(err)}`)
+    }
+  }
+
+  function armForceTimer(): void {
+    if (forceTimer) return
+    forceTimer = setTimeout(() => {
+      log('[graceful-node] Shutdown timed out — forcing exit.')
+      process.exit(1)
+    }, timeout)
+    if (forceTimer.unref) forceTimer.unref()
+  }
 
   async function shutdown(): Promise<void> {
     if (shutdownPromise) return shutdownPromise
 
+    // Arm hard timeout for every shutdown path (signal or programmatic).
+    // Without this, a hanging onShutdown callback would hang the process.
+    armForceTimer()
+
     shutdownPromise = (async () => {
-      onShutdownStart?.()
+      safeCall('onShutdownStart', onShutdownStart)
       log('[graceful-node] Shutdown signal received — draining…')
 
       // Stop readiness probe first so Kubernetes stops sending traffic
@@ -109,27 +132,16 @@ export function graceful(options: GracefulOptions = {}): GracefulHandle {
       }
 
       log('[graceful-node] Shutdown complete.')
-      onShutdownComplete?.()
+      safeCall('onShutdownComplete', onShutdownComplete)
       process.exit(0)
     })()
 
     return shutdownPromise
   }
 
-  // Hard timeout — if the graceful sequence takes too long, force exit
-  let forceTimer: ReturnType<typeof setTimeout> | null = null
-
   function onSignal(signal: string): void {
+    if (shutdownPromise) return // ignore repeats once shutdown is in flight
     log(`[graceful-node] Received ${signal}`)
-
-    if (!forceTimer) {
-      forceTimer = setTimeout(() => {
-        log('[graceful-node] Shutdown timed out — forcing exit.')
-        process.exit(1)
-      }, timeout)
-      if (forceTimer.unref) forceTimer.unref()
-    }
-
     void shutdown()
   }
 

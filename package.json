@@ -1,7 +1,7 @@
 {
   "name": "@the-arj/graceful-node",
   "version": "0.1.0",
-  "description": "Production-grade graceful shutdown and Kubernetes health checks for Node.js. Modern replacement for the abandoned @godaddy/terminus and stoppable.",
+  "description": "Production-grade graceful shutdown and Kubernetes health checks for Node.js. ",
   "keywords": [
     "graceful",
     "shutdown",
@@ -34,7 +34,7 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

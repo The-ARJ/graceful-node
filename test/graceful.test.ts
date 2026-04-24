@@ -119,6 +119,75 @@ describe('graceful', () => {
     expect(logs.some(l => l.includes('cleanup failed'))).toBe(true)
     exitSpy.mockRestore()
   })
+
+  it('does not abort the sequence when onShutdownStart throws', async () => {
+    const logs: string[] = []
+    const cleanup = vi.fn().mockResolvedValue(undefined)
+    const onShutdownComplete = vi.fn()
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit')
+    })
+
+    const handle = graceful({
+      signals: [],
+      onShutdownStart: () => { throw new Error('start boom') },
+      onShutdown: [cleanup],
+      onShutdownComplete,
+      log: msg => logs.push(msg),
+    })
+
+    await handle.shutdown().catch(() => {})
+
+    expect(logs.some(l => l.includes('onShutdownStart callback error') && l.includes('start boom'))).toBe(true)
+    expect(cleanup).toHaveBeenCalledOnce()
+    expect(onShutdownComplete).toHaveBeenCalledOnce()
+    expect(exitSpy).toHaveBeenCalledWith(0)
+    exitSpy.mockRestore()
+  })
+
+  it('does not abort the sequence when onShutdownComplete throws', async () => {
+    const logs: string[] = []
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit')
+    })
+
+    const handle = graceful({
+      signals: [],
+      onShutdownComplete: () => { throw new Error('complete boom') },
+      log: msg => logs.push(msg),
+    })
+
+    await handle.shutdown().catch(() => {})
+
+    expect(logs.some(l => l.includes('onShutdownComplete callback error') && l.includes('complete boom'))).toBe(true)
+    expect(exitSpy).toHaveBeenCalledWith(0)
+    exitSpy.mockRestore()
+  })
+
+  it('arms force-exit timeout for programmatic shutdown when cleanup hangs', async () => {
+    const logs: string[] = []
+    // Use a no-throw stub so the force-exit timer firing doesn't surface as
+    // an unhandled rejection (the timer callback has no caller to catch it).
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => undefined) as never)
+
+    const handle = graceful({
+      signals: [],
+      timeout: 50,
+      onShutdown: [() => new Promise<void>(() => { /* never resolves */ })],
+      log: msg => logs.push(msg),
+    })
+
+    // Kick off shutdown — it will hang on the cleanup callback
+    void handle.shutdown()
+
+    // Wait long enough for the force-exit timer (50ms) to fire
+    await new Promise<void>(r => setTimeout(r, 200))
+
+    expect(logs.some(l => l.includes('Shutdown timed out'))).toBe(true)
+    expect(exitSpy).toHaveBeenCalledWith(1)
+
+    exitSpy.mockRestore()
+  })
 })
 
 describe('createHealth (standalone)', () => {

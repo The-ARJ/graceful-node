@@ -1,7 +1,7 @@
 # graceful-node
 
 > Production-grade graceful shutdown and Kubernetes health checks for Node.js.  
-> Modern replacement for the abandoned [`@godaddy/terminus`](https://www.npmjs.com/package/@godaddy/terminus) and [`stoppable`](https://www.npmjs.com/package/stoppable).
+
 
 ```ts
 import http from 'node:http'
